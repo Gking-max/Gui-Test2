@@ -35,39 +35,61 @@
 //   closure — never expose it.
 // ============================================================================
 
-export function createEventEmitter() {
-  // TODO (1): create the private listeners store here.
-  //           It should be an object mapping event name → array of listeners.
+// ============================================================================
+// eventEmitter.js — Pub/Sub factory (Observer Pattern core)
+// ============================================================================
 
+export function createEventEmitter() {
+  // Private listeners store in closure
+  const listeners = {};
 
   function on(eventName, listener) {
-    // TODO (2):
-    //   - If no array exists yet for `eventName`, create one.
-    //   - Push `listener` into that array.
-    //   - Validate that `listener` is a function; otherwise throw a
-    //     TypeError with a clear message (fail loud, fail early).
-
+    // Validate listener is a function
+    if (typeof listener !== 'function') {
+      throw new TypeError(`Listener for event "${eventName}" must be a function`);
+    }
+    
+    // Create array for event if it doesn't exist
+    if (!listeners[eventName]) {
+      listeners[eventName] = [];
+    }
+    
+    // Push the listener
+    listeners[eventName].push(listener);
   }
 
   function off(eventName, listener) {
-    // TODO (3):
-    //   - If there is no array for `eventName`, return quietly.
-    //   - Otherwise remove ONLY the matching listener reference.
-    //   - Do not mutate the array in place in a way that breaks a
-    //     concurrent `emit` iteration — filter into a new array instead.
-
+    // If no listeners for this event, return quietly
+    if (!listeners[eventName]) {
+      return;
+    }
+    
+    // Filter out the matching listener (create new array to avoid mutation issues)
+    listeners[eventName] = listeners[eventName].filter(
+      existingListener => existingListener !== listener
+    );
+    
+    // Clean up empty arrays
+    if (listeners[eventName].length === 0) {
+      delete listeners[eventName];
+    }
   }
 
   function emit(eventName, payload) {
-    // TODO (4):
-    //   - If no listeners are registered for `eventName`, return.
-    //   - Otherwise call every listener with `payload`.
-    //   - Wrap each call in a try/catch so one bad listener does not
-    //     break the others. Log errors with console.error.
-
+    // If no listeners, return silently
+    if (!listeners[eventName]) {
+      return;
+    }
+    
+    // Call each listener with payload, catching errors
+    listeners[eventName].forEach(listener => {
+      try {
+        listener(payload);
+      } catch (error) {
+        console.error(`Error in listener for event "${eventName}":`, error);
+      }
+    });
   }
 
-  // Public interface — factory return value. Notice how the internal
-  // store is not exposed; it is sealed inside this closure.
   return Object.freeze({ on, off, emit });
 }
